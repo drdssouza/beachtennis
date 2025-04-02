@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecionando...</title>
+  <script type="text/javascript">
+    // Redireciona para a página principal mantendo a URL
+    const path = window.location.pathname;
+    const searchParams = window.location.search;
+    const hash = window.location.hash;
+    const url = window.location.origin + '/#' + path + searchParams + hash;
+    window.location.replace(url);
+  </script>
+</head>
+<body>
+  <h1>Redirecionando...</h1>
+  <p>Se você não for redirecionado automaticamente, <a href="/">clique aqui</a>.</p>
+</body>
+</html>
