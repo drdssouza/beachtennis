@@ -132,7 +132,7 @@ export function MatchDrawingSystem({
       );
     } else {
       toast.error(
-        "Não foi possível gerar todas as partidas sem repetições de duplas ou jogadores na mesma rodada.  Por favor, verifique os jogadores disponíveis."
+        "Não foi possível gerar todas as partidas sem repetições de duplas ou jogadores na mesma rodada.  Desculpe a incompetência."
       );
       onMatchesGenerated([]);
     }

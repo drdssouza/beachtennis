@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { FormatSelector } from "@/components/FormatSelector";
 import { PlayerManagement } from "@/components/PlayerManagement";
@@ -8,14 +8,36 @@ import { Standings } from "@/components/Standings";
 import { MatchHistory } from "@/components/MatchHistory";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Player, Match, PlayerStats, TournamentFormat } from "@/types";
+import { loadUsedPairs, saveUsedPairs } from "@/components/ui/storage_utils"; 
 
 const Index = () => {
   const [format, setFormat] = useState<TournamentFormat | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [currentRound, setCurrentRound] = useState(1);
   const [currentMatches, setCurrentMatches] = useState<Match[]>([]);
-  const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
+  const [completedMatches, setCompletedMatches] = useState<Match[]>(() => {
+    if (typeof window !== 'undefined'){
+      const savedCompletedMatches = localStorage.getItem('completedMatches');
+      return savedCompletedMatches ? JSON.parse(savedCompletedMatches) : [];
+    }
+    return [];
+  });
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
+  const [usedPairs, setUsedPairs] = useState<Set<string>>(() => { // Usar o estado para usedPairs
+    return loadUsedPairs();
+  });
+
+  // Salvar completedMatches no localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined'){
+      localStorage.setItem('completedMatches', JSON.stringify(completedMatches));
+    }
+  }, [completedMatches]);
+
+  // Salvar usedPairs no localStorage
+  useEffect(() => {
+    saveUsedPairs(usedPairs);
+  }, [usedPairs]);
   
   // Calculate player stats whenever matches change
   useEffect(() => {
@@ -75,6 +97,10 @@ const Index = () => {
     setCurrentMatches([]);
     setCompletedMatches([]);
     setCurrentRound(1);
+    setUsedPairs(new Set()); // Limpa as duplas usadas ao mudar o formato
+    if (typeof window !== 'undefined'){
+      localStorage.removeItem(STORAGE_KEY);
+    }
   };
   
   const handleMatchesGenerated = (newMatches: Match[]) => {
@@ -100,6 +126,17 @@ const Index = () => {
       // Increment current round
       setCurrentRound(prev => prev + 1);
     }
+
+    // Atualiza usedPairs com as duplas da partida atualizada
+    const updatedPair1 = [updatedMatch.team1[0].id, updatedMatch.team1[1].id].sort().join('-');
+    const updatedPair2 = [updatedMatch.team2[0].id, updatedMatch.team2[1].id].sort().join('-');
+
+    setUsedPairs(prevPairs => {
+      const newPairs = new Set(prevPairs);
+      newPairs.add(updatedPair1);
+      newPairs.add(updatedPair2);
+      return newPairs;
+    });
   };
   
   return (
@@ -136,7 +173,7 @@ const Index = () => {
                   players={players}
                   format={format}
                   currentRound={currentRound}
-                  pastMatches={completedMatches}
+                  pastMatches={completedMatches} // Passa completedMatches para o componente
                   onMatchesGenerated={handleMatchesGenerated}
                 />
                 
