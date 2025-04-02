@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Player, Match, TournamentFormat } from "../types";
 import { Users } from "lucide-react";
 import { toast } from "sonner";
@@ -11,131 +11,155 @@ interface MatchDrawingSystemProps {
   onMatchesGenerated: (matches: Match[]) => void;
 }
 
-export function MatchDrawingSystem({ 
-  players, 
-  format, 
+export function MatchDrawingSystem({
+  players,
+  format,
   currentRound,
   pastMatches,
-  onMatchesGenerated 
+  onMatchesGenerated,
 }: MatchDrawingSystemProps) {
-  const requiredPlayers = format === 'super8' ? 8 : 12;
-  
+  const requiredPlayers = format === "super8" ? 8 : 12;
+  const [usedPairs, setUsedPairs] = useState<Set<string>>(() => {
+    const initialPairs = new Set<string>();
+    pastMatches.forEach((match) => {
+      const pair1 = [match.team1[0].id, match.team1[1].id].sort().join("-");
+      const pair2 = [match.team2[0].id, match.team2[1].id].sort().join("-");
+      initialPairs.add(pair1);
+      initialPairs.add(pair2);
+    });
+    return initialPairs;
+  });
+
+    // Garante que usedPairs seja atualizado quando pastMatches mudar
+    useEffect(() => {
+        const initialPairs = new Set<string>();
+        pastMatches.forEach((match) => {
+          const pair1 = [match.team1[0].id, match.team1[1].id].sort().join("-");
+          const pair2 = [match.team2[0].id, match.team2[1].id].sort().join("-");
+          initialPairs.add(pair1);
+          initialPairs.add(pair2);
+        });
+        setUsedPairs(initialPairs);
+      }, [pastMatches]);
+
   const generateMatches = () => {
     if (players.length < requiredPlayers) {
-      toast.error(`Você precisa adicionar ${requiredPlayers} jogadores para gerar as partidas!`);
+      toast.error(
+        `Você precisa adicionar ${requiredPlayers} jogadores para gerar as partidas!`
+      );
       return;
     }
-    
-    // Function to check if these players have been partners before
-    const haveBeenPartners = (player1: Player, player2: Player): boolean => {
-      return pastMatches.some(match => 
-        (match.team1[0].id === player1.id && match.team1[1].id === player2.id) ||
-        (match.team1[0].id === player2.id && match.team1[1].id === player1.id) ||
-        (match.team2[0].id === player1.id && match.team2[1].id === player2.id) ||
-        (match.team2[0].id === player2.id && match.team2[1].id === player1.id)
-      );
-    };
 
-    // Shuffling players
     const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-    
-    // For Super 8: we need 4 teams (8 players)
-    // For Super 12: we need 6 teams (12 players)
-    const numTeams = format === 'super8' ? 4 : 6;
-    
-    let attempts = 0;
-    const maxAttempts = 100; // Limit attempts to prevent infinite loop
-    let validPairings = false;
-    let teams: [Player, Player][] = [];
-    
-    while (!validPairings && attempts < maxAttempts) {
-      validPairings = true;
-      teams = [];
-      const tempPlayers = [...shuffledPlayers];
-      
-      for (let i = 0; i < numTeams; i++) {
-        let foundValidPair = false;
-        
-        // Try to find a valid pair where players haven't been partners before
-        for (let j = 0; j < tempPlayers.length; j++) {
-          for (let k = j + 1; k < tempPlayers.length; k++) {
-            if (!haveBeenPartners(tempPlayers[j], tempPlayers[k])) {
-              teams.push([tempPlayers[j], tempPlayers[k]]);
-              // Remove these players from the temp array
-              tempPlayers.splice(k, 1);
-              tempPlayers.splice(j, 1);
-              foundValidPair = true;
+    const numTeams = format === "super8" ? 4 : 6;
+    const newMatches: Match[] = [];
+    const currentRoundUsedPlayers = new Set<string>(); // Rastreia jogadores usados nesta rodada
+    let possible = true;
+
+    for (let i = 0; i < numTeams / 2; i++) {
+      let team1: [Player, Player] | null = null;
+      let team2: [Player, Player] | null = null;
+
+      // Tenta encontrar uma dupla válida para o time 1
+      for (let j = 0; j < shuffledPlayers.length; j++) {
+        for (let k = j + 1; k < shuffledPlayers.length; k++) {
+          const player1 = shuffledPlayers[j];
+          const player2 = shuffledPlayers[k];
+          const pair1 = [player1.id, player2.id].sort().join("-");
+
+          if (
+            !usedPairs.has(pair1) &&
+            !currentRoundUsedPlayers.has(player1.id) &&
+            !currentRoundUsedPlayers.has(player2.id)
+          ) {
+            team1 = [player1, player2];
+            currentRoundUsedPlayers.add(player1.id);
+            currentRoundUsedPlayers.add(player2.id);
+            shuffledPlayers.splice(k, 1); // Remove o segundo jogador para não ser reutilizado
+            shuffledPlayers.splice(j, 1); // Remove o primeiro jogador
+            usedPairs.add(pair1); //adiciona a dupla aos pares já usados
+            break;
+          }
+        }
+        if (team1) break; // Se encontrou uma dupla válida, sai do loop
+      }
+
+      // Tenta encontrar uma dupla válida para o time 2
+      if (team1) {
+        for (let j = 0; j < shuffledPlayers.length; j++) {
+          for (let k = j + 1; k < shuffledPlayers.length; k++) {
+            const player3 = shuffledPlayers[j];
+            const player4 = shuffledPlayers[k];
+            const pair2 = [player3.id, player4.id].sort().join("-");
+            if (
+              !usedPairs.has(pair2) &&
+              !currentRoundUsedPlayers.has(player3.id) &&
+              !currentRoundUsedPlayers.has(player4.id)
+            ) {
+              team2 = [player3, player4];
+              currentRoundUsedPlayers.add(player3.id);
+              currentRoundUsedPlayers.add(player4.id);
+              shuffledPlayers.splice(k, 1);
+              shuffledPlayers.splice(j, 1);
+              usedPairs.add(pair2); //adiciona a dupla aos pares já usados
               break;
             }
           }
-          if (foundValidPair) break;
-        }
-        
-        // If we couldn't find a valid pair, we need to try again
-        if (!foundValidPair) {
-          validPairings = false;
-          break;
+          if (team2) break;
         }
       }
-      
-      attempts++;
-    }
-    
-    if (!validPairings) {
-      toast.error("Não foi possível gerar duplas sem repetições. Algumas duplas serão repetidas.");
-      // In this case, just make random pairs
-      teams = [];
-      const tempPlayers = [...shuffledPlayers];
-      
-      for (let i = 0; i < numTeams; i++) {
-        teams.push([tempPlayers.pop()!, tempPlayers.pop()!]);
+
+      if (team1 && team2) {
+        newMatches.push({
+          id: crypto.randomUUID(),
+          team1,
+          team2,
+          score1: 0,
+          score2: 0,
+          round: currentRound,
+          completed: false,
+        });
+      } else {
+        possible = false;
+        break; // Não foi possível formar as duplas para esta partida
       }
     }
-    
-    // Create matches
-    const newMatches: Match[] = [];
-    
-    // For Super 8: 2 matches (4 teams)
-    // For Super 12: 3 matches (6 teams)
-    const numMatches = format === 'super8' ? 2 : 3;
-    
-    for (let i = 0; i < numMatches; i++) {
-      newMatches.push({
-        id: crypto.randomUUID(),
-        team1: teams[i * 2],
-        team2: teams[i * 2 + 1],
-        score1: 0,
-        score2: 0,
-        round: currentRound,
-        completed: false
-      });
+
+    if (possible) {
+      onMatchesGenerated(newMatches);
+      toast.success(
+        `${newMatches.length} partidas geradas com sucesso para a rodada ${currentRound}!`
+      );
+    } else {
+      toast.error(
+        "Não foi possível gerar todas as partidas sem repetições de duplas ou jogadores na mesma rodada.  Por favor, verifique os jogadores disponíveis."
+      );
+      onMatchesGenerated([]);
     }
-    
-    onMatchesGenerated(newMatches);
-    toast.success(`${numMatches} partidas geradas com sucesso para a rodada ${currentRound}!`);
   };
-  
+
   return (
     <div className="beach-card mt-6">
-      <h2 className="text-xl font-bold mb-4 text-beach-darkGray">Sortear Partidas</h2>
-      <p className="text-sm text-gray-600 mb-4">
-        Rodada atual: {currentRound}
-      </p>
-      
+      <h2 className="text-xl font-bold mb-4 text-beach-darkGray">
+        Sortear Partidas
+      </h2>
+      <p className="text-sm text-gray-600 mb-4">Rodada atual: {currentRound}</p>
+
       <button
         onClick={generateMatches}
         disabled={players.length < requiredPlayers}
         className={`beach-button-primary w-full flex justify-center items-center gap-2 ${
-          players.length < requiredPlayers ? 'opacity-50 cursor-not-allowed' : ''
+          players.length < requiredPlayers ? "opacity-50 cursor-not-allowed" : ""
         }`}
       >
         <Users className="h-5 w-5" />
         <span>Sortear Partidas</span>
       </button>
-      
+
       {players.length < requiredPlayers && (
         <p className="text-beach-red text-sm mt-2">
-          Você precisa adicionar {requiredPlayers - players.length} jogadores para poder sortear as partidas.
+          Você precisa adicionar {requiredPlayers - players.length} jogadores
+          para poder sortear as partidas.
         </p>
       )}
     </div>
