@@ -1,17 +1,40 @@
 import { PlayerStats } from "../types";
 import { Trophy } from "lucide-react";
+import { SortingCriterion } from "../utils/storage_utils";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface StandingsProps {
   playerStats: PlayerStats[];
+  sortingCriteria: SortingCriterion[];
 }
 
-export function Standings({ playerStats }: StandingsProps) {
-  // Sort by: 1) wins, 2) game balance, 3) total games won
-  const sortedStats = [...playerStats].sort((a, b) => {
-    if (a.wins !== b.wins) return b.wins - a.wins;
-    if (a.gameBalance !== b.gameBalance) return b.gameBalance - a.gameBalance;
-    return b.totalGamesWon - a.totalGamesWon;
-  });
+export function Standings({ playerStats, sortingCriteria }: StandingsProps) {
+  // Função auxiliar para comparar estatísticas usando os critérios personalizados
+  const comparePlayerStats = (a: PlayerStats, b: PlayerStats): number => {
+    for (const criterion of sortingCriteria) {
+      // Para games perdidos, menor é melhor (ordem inversa)
+      if (criterion === 'totalGamesLost') {
+        if (a[criterion] !== b[criterion]) {
+          return a[criterion] - b[criterion]; // Ordem crescente
+        }
+      } 
+      // Para todos os outros critérios, maior é melhor
+      else if (a[criterion] !== b[criterion]) {
+        return b[criterion] - a[criterion]; // Ordem decrescente
+      }
+    }
+    return 0; // Empate em todos os critérios
+  };
+  
+  const sortedStats = [...playerStats].sort(comparePlayerStats);
   
   return (
     <div className="beach-card mt-6">
@@ -21,21 +44,21 @@ export function Standings({ playerStats }: StandingsProps) {
       </div>
       
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-beach-lightGray">
-              <th className="p-3 text-left">Pos.</th>
-              <th className="p-3 text-left">Jogador</th>
-              <th className="p-3 text-center">Vitórias</th>
-              <th className="p-3 text-center">Games Ganhos</th>
-              <th className="p-3 text-center">Games Perdidos</th>
-              <th className="p-3 text-center">Saldo</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-beach-lightGray">
+              <TableHead className="w-16">Pos.</TableHead>
+              <TableHead>Jogador</TableHead>
+              <TableHead className="text-center">Vitórias</TableHead>
+              <TableHead className="text-center">Games Ganhos</TableHead>
+              <TableHead className="text-center">Games Perdidos</TableHead>
+              <TableHead className="text-center">Saldo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {sortedStats.map((stat, index) => (
-              <tr key={stat.player.id} className="border-b border-gray-200 hover:bg-gray-50">
-                <td className="p-3 text-left">
+              <TableRow key={stat.player.id} className="hover:bg-gray-50">
+                <TableCell className="font-medium">
                   {index === 0 ? (
                     <span className="inline-flex items-center justify-center w-6 h-6 bg-beach-yellow text-beach-darkGray rounded-full font-bold">1</span>
                   ) : index === 1 ? (
@@ -45,21 +68,35 @@ export function Standings({ playerStats }: StandingsProps) {
                   ) : (
                     <span className="pl-2">{index + 1}</span>
                   )}
-                </td>
-                <td className="p-3 text-left font-medium">{stat.player.name}</td>
-                <td className="p-3 text-center font-bold">{stat.wins}</td>
-                <td className="p-3 text-center">{stat.totalGamesWon}</td>
-                <td className="p-3 text-center">{stat.totalGamesLost}</td>
-                <td className={`p-3 text-center font-medium ${
+                </TableCell>
+                <TableCell className="font-medium">{stat.player.name}</TableCell>
+                <TableCell className="text-center font-bold">{stat.wins}</TableCell>
+                <TableCell className="text-center">{stat.totalGamesWon}</TableCell>
+                <TableCell className="text-center">{stat.totalGamesLost}</TableCell>
+                <TableCell className={`text-center font-medium ${
                   stat.gameBalance > 0 ? 'text-beach-green' :
                   stat.gameBalance < 0 ? 'text-beach-red' : ''
                 }`}>
                   {stat.gameBalance > 0 ? `+${stat.gameBalance}` : stat.gameBalance}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
+      </div>
+      
+      <div className="mt-4 text-sm text-gray-500">
+        <p>Critérios de desempate:</p>
+        <ol className="list-decimal pl-5 mt-1">
+          {sortingCriteria.map((criterion, index) => (
+            <li key={index}>
+              {criterion === 'wins' && 'Vitórias'}
+              {criterion === 'gameBalance' && 'Saldo de Games'}
+              {criterion === 'totalGamesWon' && 'Games Ganhos'}
+              {criterion === 'totalGamesLost' && 'Games Perdidos (quanto menos, melhor)'}
+            </li>
+          ))}
+        </ol>
       </div>
     </div>
   );

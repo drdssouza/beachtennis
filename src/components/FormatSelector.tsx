@@ -34,6 +34,18 @@ export function FormatSelector({ onFormatSelect, selectedFormat }: FormatSelecto
           <h3 className="font-bold text-lg mb-2">Super 12</h3>
           <p className="text-sm text-gray-600">12 jogadores, 6 duplas por rodada</p>
         </button>
+
+        <button
+          onClick={() => onFormatSelect('tournament')}
+          className={`p-6 rounded-xl border-2 transition-all flex-1 ${
+            selectedFormat === 'tournament' 
+              ? 'border-beach-green bg-beach-green/10' 
+              : 'border-gray-200 hover:border-beach-green/50'
+          }`}
+        >
+          <h3 className="font-bold text-lg mb-2">Torneio</h3>
+          <p className="text-sm text-gray-600">Grupos e sistema mata-mata</p>
+        </button>
       </div>
     </div>
   );
