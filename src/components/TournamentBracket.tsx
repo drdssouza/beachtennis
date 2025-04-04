@@ -29,26 +29,6 @@ export function TournamentBracket({ settings, matches, onMatchUpdate }: Tourname
   const semisMatches = getRoundMatches('semis');
   const finalMatch = getRoundMatches('final')[0];
   
-  // Atualiza uma partida
-  const updateBracketMatch = (match: Match) => {
-    const score1 = window.prompt("Placar da Dupla 1:", "0");
-    const score2 = window.prompt("Placar da Dupla 2:", "0");
-    
-    if (score1 !== null && score2 !== null) {
-      const s1 = parseInt(score1);
-      const s2 = parseInt(score2);
-      
-      if (!isNaN(s1) && !isNaN(s2)) {
-        onMatchUpdate({
-          ...match,
-          score1: s1,
-          score2: s2,
-          completed: true
-        });
-      }
-    }
-  };
-
   return (
     <div className="beach-card mt-6 overflow-x-auto">
       <h2 className="text-xl font-bold mb-4 text-beach-darkGray flex items-center gap-2">
@@ -70,15 +50,23 @@ export function TournamentBracket({ settings, matches, onMatchUpdate }: Tourname
                 round16Matches.map(match => (
                   <div 
                     key={match.id} 
-                    className="bg-white border rounded-lg p-2 text-sm cursor-pointer hover:bg-gray-50"
-                    onClick={() => !match.completed && updateBracketMatch(match)}
+                    className="bg-white border rounded-lg p-2 text-sm"
                   >
                     <div className="font-semibold">{match.team1[0].name} / {match.team1[1].name}</div>
                     <div className="text-xs text-gray-500 my-1">vs</div>
                     <div className="font-semibold">{match.team2[0].name} / {match.team2[1].name}</div>
-                    {match.completed && (
+                    {match.completed ? (
                       <div className="mt-1 text-xs">
                         Resultado: {match.score1} - {match.score2}
+                      </div>
+                    ) : (
+                      <div className="mt-1">
+                        <button
+                          onClick={() => onMatchUpdate({...match, id: match.id})}
+                          className="text-xs py-1 px-2 bg-beach-blue text-white rounded hover:bg-opacity-90 transition-colors"
+                        >
+                          Adicionar Placar
+                        </button>
                       </div>
                     )}
                   </div>
@@ -111,15 +99,23 @@ export function TournamentBracket({ settings, matches, onMatchUpdate }: Tourname
               quartersMatches.map(match => (
                 <div 
                   key={match.id} 
-                  className="bg-white border rounded-lg p-2 text-sm cursor-pointer hover:bg-gray-50"
-                  onClick={() => !match.completed && updateBracketMatch(match)}
+                  className="bg-white border rounded-lg p-2 text-sm"
                 >
                   <div className="font-semibold">{match.team1[0].name} / {match.team1[1].name}</div>
                   <div className="text-xs text-gray-500 my-1">vs</div>
                   <div className="font-semibold">{match.team2[0].name} / {match.team2[1].name}</div>
-                  {match.completed && (
+                  {match.completed ? (
                     <div className="mt-1 text-xs">
                       Resultado: {match.score1} - {match.score2}
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <button
+                        onClick={() => onMatchUpdate({...match, id: match.id})}
+                        className="text-xs py-1 px-2 bg-beach-blue text-white rounded hover:bg-opacity-90 transition-colors"
+                      >
+                        Adicionar Placar
+                      </button>
                     </div>
                   )}
                 </div>
@@ -139,15 +135,23 @@ export function TournamentBracket({ settings, matches, onMatchUpdate }: Tourname
               semisMatches.map(match => (
                 <div 
                   key={match.id} 
-                  className="bg-white border rounded-lg p-2 text-sm cursor-pointer hover:bg-gray-50"
-                  onClick={() => !match.completed && updateBracketMatch(match)}
+                  className="bg-white border rounded-lg p-2 text-sm"
                 >
                   <div className="font-semibold">{match.team1[0].name} / {match.team1[1].name}</div>
                   <div className="text-xs text-gray-500 my-1">vs</div>
                   <div className="font-semibold">{match.team2[0].name} / {match.team2[1].name}</div>
-                  {match.completed && (
+                  {match.completed ? (
                     <div className="mt-1 text-xs">
                       Resultado: {match.score1} - {match.score2}
+                    </div>
+                  ) : (
+                    <div className="mt-1">
+                      <button
+                        onClick={() => onMatchUpdate({...match, id: match.id})}
+                        className="text-xs py-1 px-2 bg-beach-blue text-white rounded hover:bg-opacity-90 transition-colors"
+                      >
+                        Adicionar Placar
+                      </button>
                     </div>
                   )}
                 </div>
@@ -166,15 +170,23 @@ export function TournamentBracket({ settings, matches, onMatchUpdate }: Tourname
             {finalMatch ? (
               <div 
                 key={finalMatch.id} 
-                className="bg-white border rounded-lg p-2 text-sm cursor-pointer hover:bg-gray-50"
-                onClick={() => !finalMatch.completed && updateBracketMatch(finalMatch)}
+                className="bg-white border rounded-lg p-2 text-sm"
               >
                 <div className="font-semibold">{finalMatch.team1[0].name} / {finalMatch.team1[1].name}</div>
                 <div className="text-xs text-gray-500 my-1">vs</div>
                 <div className="font-semibold">{finalMatch.team2[0].name} / {finalMatch.team2[1].name}</div>
-                {finalMatch.completed && (
+                {finalMatch.completed ? (
                   <div className="mt-1 text-xs">
                     Resultado: {finalMatch.score1} - {finalMatch.score2}
+                  </div>
+                ) : (
+                  <div className="mt-1">
+                    <button
+                      onClick={() => onMatchUpdate({...finalMatch, id: finalMatch.id})}
+                      className="text-xs py-1 px-2 bg-beach-blue text-white rounded hover:bg-opacity-90 transition-colors"
+                    >
+                      Adicionar Placar
+                    </button>
                   </div>
                 )}
               </div>

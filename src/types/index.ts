@@ -41,3 +41,18 @@ export interface TournamentSettings {
   startingRound: 'round16' | 'quarters' | 'semis' | 'final';
   groups: TournamentGroup[];
 }
+
+export interface Event {
+  id: string;
+  name: string;
+  format: TournamentFormat;
+  createdAt: string;
+  code?: string; // Unique code for event sharing
+  players?: Player[];
+  teams?: Team[];
+  matches: Match[];
+  completedMatches: Match[];
+  currentRound: number;
+  tournamentSettings?: TournamentSettings;
+  creatorId?: string; // ID of user who created the event
+}

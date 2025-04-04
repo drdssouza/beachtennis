@@ -10,8 +10,6 @@ export function useMatchGeneration(
 ) {
   const [usedPairs, setUsedPairs] = useState<Set<string>>(new Set());
   const [tournamentComplete, setTournamentComplete] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 10;
   const requiredPlayers = format === "super8" ? 8 : format === "super12" ? 12 : 4;
 
   // Atualiza usedPairs quando pastMatches mudar
@@ -53,104 +51,61 @@ export function useMatchGeneration(
     }
   };
 
-  // Função que tenta gerar um conjunto de partidas
-  const tryGenerateMatches = () => {
-    const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-    const numTeams = format === "super8" ? 4 : 6;
-    const newMatches: Match[] = [];
-    const currentRoundUsedPlayers = new Set<string>();
-    const tempUsedPairs = new Set(usedPairs);
-    let possible = true;
-
-    for (let i = 0; i < numTeams / 2; i++) {
-      let team1: [Player, Player] | null = null;
-      let team2: [Player, Player] | null = null;
-
-      // Tenta encontrar uma dupla válida para o time 1
-      for (let j = 0; j < shuffledPlayers.length; j++) {
-        for (let k = j + 1; k < shuffledPlayers.length; k++) {
-          const player1 = shuffledPlayers[j];
-          const player2 = shuffledPlayers[k];
-          const pair1 = [player1.id, player2.id].sort().join("-");
-
-          if (
-            !tempUsedPairs.has(pair1) &&
-            !currentRoundUsedPlayers.has(player1.id) &&
-            !currentRoundUsedPlayers.has(player2.id)
-          ) {
-            team1 = [player1, player2];
-            currentRoundUsedPlayers.add(player1.id);
-            currentRoundUsedPlayers.add(player2.id);
-            
-            // Trabalhar com cópia do array para evitar problemas
-            const tempPlayers = [...shuffledPlayers];
-            tempPlayers.splice(tempPlayers.findIndex(p => p.id === player2.id), 1);
-            tempPlayers.splice(tempPlayers.findIndex(p => p.id === player1.id), 1);
-            shuffledPlayers.length = 0;
-            shuffledPlayers.push(...tempPlayers);
-            
-            tempUsedPairs.add(pair1);
-            break;
-          }
-        }
-        if (team1) break;
-      }
-
-      // Tenta encontrar uma dupla válida para o time 2
-      if (team1) {
-        for (let j = 0; j < shuffledPlayers.length; j++) {
-          for (let k = j + 1; k < shuffledPlayers.length; k++) {
-            const player3 = shuffledPlayers[j];
-            const player4 = shuffledPlayers[k];
-            const pair2 = [player3.id, player4.id].sort().join("-");
-            if (
-              !tempUsedPairs.has(pair2) &&
-              !currentRoundUsedPlayers.has(player3.id) &&
-              !currentRoundUsedPlayers.has(player4.id)
-            ) {
-              team2 = [player3, player4];
-              currentRoundUsedPlayers.add(player3.id);
-              currentRoundUsedPlayers.add(player4.id);
-              
-              const tempPlayers = [...shuffledPlayers];
-              tempPlayers.splice(tempPlayers.findIndex(p => p.id === player4.id), 1);
-              tempPlayers.splice(tempPlayers.findIndex(p => p.id === player3.id), 1);
-              shuffledPlayers.length = 0;
-              shuffledPlayers.push(...tempPlayers);
-              
-              tempUsedPairs.add(pair2);
-              break;
-            }
-          }
-          if (team2) break;
-        }
-      }
-
-      if (team1 && team2) {
-        newMatches.push({
-          id: crypto.randomUUID(),
-          team1,
-          team2,
-          score1: 0,
-          score2: 0,
-          round: currentRound,
-          completed: false,
-        });
-      } else {
-        possible = false;
-        break;
+  // Função melhorada para gerar todas as partidas possíveis de uma vez
+  const generateAllPossibleMatches = () => {
+    // Cria todas as combinações possíveis de duplas
+    const allPairs: [Player, Player][] = [];
+    for (let i = 0; i < players.length; i++) {
+      for (let j = i + 1; j < players.length; j++) {
+        allPairs.push([players[i], players[j]]);
       }
     }
-
-    if (possible) {
-      setUsedPairs(tempUsedPairs);
-      return { success: true, matches: newMatches };
-    } else {
+    
+    // Filtra apenas os pares que ainda não foram usados
+    const unusedPairs = allPairs.filter(pair => {
+      const pairId = [pair[0].id, pair[1].id].sort().join("-");
+      return !usedPairs.has(pairId);
+    });
+    
+    if (unusedPairs.length < 2) {
+      // Não há pares suficientes para formar uma partida
       return { success: false, matches: [] };
     }
+    
+    // Embaralha os pares não utilizados
+    const shuffledPairs = [...unusedPairs].sort(() => Math.random() - 0.5);
+    
+    // Calcula quantas partidas podemos formar (máximo possível)
+    const numMatches = Math.floor(shuffledPairs.length / 2);
+    const newMatches: Match[] = [];
+    const newUsedPairs = new Set(usedPairs);
+    
+    for (let i = 0; i < numMatches; i++) {
+      const team1 = shuffledPairs[i * 2];
+      const team2 = shuffledPairs[i * 2 + 1];
+      
+      const pair1Id = [team1[0].id, team1[1].id].sort().join("-");
+      const pair2Id = [team2[0].id, team2[1].id].sort().join("-");
+      
+      newUsedPairs.add(pair1Id);
+      newUsedPairs.add(pair2Id);
+      
+      newMatches.push({
+        id: crypto.randomUUID(),
+        team1: team1 as [Player, Player],
+        team2: team2 as [Player, Player],
+        score1: 0,
+        score2: 0,
+        round: currentRound,
+        completed: false,
+      });
+    }
+    
+    setUsedPairs(newUsedPairs);
+    return { success: true, matches: newMatches };
   };
 
-  // Função para gerar partidas com tentativas automáticas
+  // Função para gerar partidas
   const generateMatches = (onMatchesGenerated: (matches: Match[]) => void) => {
     if (players.length < requiredPlayers) {
       toast.error(
@@ -164,32 +119,34 @@ export function useMatchGeneration(
       return;
     }
 
-    let allPossibleCombinationsTried = false;
-    let attempt = 0;
-    let resultMatches: Match[] = [];
-
-    // Loop para tentar diferentes combinações automaticamente
-    while (!allPossibleCombinationsTried && attempt < maxRetries) {
-      const result = tryGenerateMatches();
-      if (result.success) {
-        resultMatches = result.matches;
-        allPossibleCombinationsTried = true;
-      } else {
-        attempt++;
-      }
-    }
-
-    if (resultMatches.length > 0) {
+    const result = generateAllPossibleMatches();
+    
+    if (result.success && result.matches.length > 0) {
       // Atualiza o estado e notifica o sucesso
-      onMatchesGenerated(resultMatches);
+      onMatchesGenerated(result.matches);
       toast.success(
-        `${resultMatches.length} partidas geradas com sucesso para a rodada ${currentRound}!`
+        `${result.matches.length} partidas geradas com sucesso para a rodada ${currentRound}!`
       );
-    } else {
-      // Notifica sobre a falha após várias tentativas
-      toast.error(
-        "Não foi possível gerar partidas após várias tentativas. Algumas duplas podem já ter jogado juntas ou não há combinações válidas restantes."
-      );
+      
+      // Se estiver próximo do fim, avise o usuário
+      const unusedPairsLeft = (players.length * (players.length - 1)) / 2 - usedPairs.size - result.matches.length;
+      if (unusedPairsLeft < 4 && unusedPairsLeft > 0) {
+        toast.info(`Restam apenas ${unusedPairsLeft} combinações possíveis de duplas.`, {
+          duration: 5000,
+        });
+      }
+    } else if (result.matches.length === 0) {
+      // Verifica se há jogadores suficientes
+      if (usedPairs.size >= ((players.length * (players.length - 1)) / 2) - 1) {
+        setTournamentComplete(true);
+        toast.info("Todas as combinações possíveis já foram realizadas! O torneio está completo.", {
+          duration: 6000,
+        });
+      } else {
+        toast.error(
+          "Não foi possível gerar mais partidas. Por favor, adicione mais jogadores ou inicie um novo torneio."
+        );
+      }
       onMatchesGenerated([]);
     }
   };

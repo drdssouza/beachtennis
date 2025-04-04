@@ -9,8 +9,9 @@ import { MatchHistory } from "@/components/MatchHistory";
 import { SortingCriteriaSelector } from "@/components/SortingCriteriaSelector";
 import { TournamentSetup } from "@/components/TournamentSetup";
 import { TournamentBracket } from "@/components/TournamentBracket";
+import { EventManager } from "@/components/EventManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Player, Match, PlayerStats, TournamentFormat, TournamentSettings, Team } from "@/types";
+import { Player, Match, PlayerStats, TournamentFormat, TournamentSettings, Team, Event } from "@/types";
 import { 
   SortingCriterion, 
   loadSortingCriteria, 
@@ -18,6 +19,7 @@ import {
   loadTournamentSettings,
   saveTournamentSettings
 } from "@/utils/storage_utils";
+import { toast } from "sonner";
 
 const Index = () => {
   const [format, setFormat] = useState<TournamentFormat | null>(null);
@@ -33,6 +35,8 @@ const Index = () => {
   const [tournamentSettings, setTournamentSettings] = useState<TournamentSettings | null>(
     loadTournamentSettings()
   );
+  const [activeView, setActiveView] = useState<'create' | 'view'>('create');
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   
   // Calcula as estatísticas dos jogadores baseadas nas partidas
   useEffect(() => {
@@ -118,6 +122,8 @@ const Index = () => {
     setCompletedMatches([]);
     setCurrentRound(1);
     setTournamentSettings(null);
+    setActiveView('create');
+    setSelectedEvent(null);
   };
   
   const handleMatchesGenerated = (newMatches: Match[]) => {
@@ -125,7 +131,33 @@ const Index = () => {
   };
   
   const handleMatchUpdate = (updatedMatch: Match) => {
-    // Primeiro, verifica se a partida já está nas partidas atuais
+    // First, verify if this is a tournament bracket match
+    if (format === 'tournament' && !updatedMatch.completed) {
+      // Use the same scoring mechanism as in MatchCard for tournament bracket
+      const score1 = window.prompt("Placar da Dupla 1:", "0");
+      const score2 = window.prompt("Placar da Dupla 2:", "0");
+      
+      if (score1 !== null && score2 !== null) {
+        const s1 = parseInt(score1);
+        const s2 = parseInt(score2);
+        
+        if (!isNaN(s1) && !isNaN(s2)) {
+          updatedMatch = {
+            ...updatedMatch,
+            score1: s1,
+            score2: s2,
+            completed: true
+          };
+        } else {
+          toast.error("Por favor, informe números válidos");
+          return;
+        }
+      } else {
+        return; // User cancelled
+      }
+    }
+    
+    // Now proceed with regular match update logic
     const matchIndex = currentMatches.findIndex(m => m.id === updatedMatch.id);
     
     if (matchIndex >= 0) {
@@ -167,6 +199,31 @@ const Index = () => {
     saveTournamentSettings(settings);
   };
   
+  const handleEventSelect = (event: Event) => {
+    setFormat(event.format);
+    saveFormat(event.format);
+    
+    if (event.format !== 'tournament') {
+      setPlayers(event.players || []);
+    } else {
+      setTeams(event.teams || []);
+    }
+    
+    setCurrentMatches(event.matches);
+    setCompletedMatches(event.completedMatches);
+    setCurrentRound(event.currentRound);
+    
+    if (event.tournamentSettings) {
+      setTournamentSettings(event.tournamentSettings);
+      saveTournamentSettings(event.tournamentSettings);
+    }
+    
+    setSelectedEvent(event);
+    setActiveView('view');
+    
+    toast.success(`Evento "${event.name}" carregado com sucesso!`);
+  };
+  
   return (
     <div className="min-h-screen bg-beach-lightGray">
       <Header />
@@ -178,102 +235,182 @@ const Index = () => {
           selectedFormat={format} 
         />
         
-        {format && (
+        {!format ? (
+          // Mostrar busca de eventos na página inicial quando nenhum formato está selecionado
+          <EventManager
+            format={null as any}
+            currentState={{
+              players: [],
+              teams: [],
+              matches: [],
+              completedMatches: [],
+              currentRound: 1
+            }}
+            onEventSelect={handleEventSelect}
+          />
+        ) : (
           <>
-            {/* Gerenciamento de Jogadores ou Times */}
-            {format === 'tournament' ? (
-              <PlayerManagement 
-                players={players} 
-                setPlayers={setPlayers} 
+            {/* Opções de Visualização - Criar ou Visualizar Evento */}
+            <div className="flex justify-between items-center mt-6 mb-4">
+              <div className="flex space-x-2">
+                <button 
+                  onClick={() => setActiveView('create')}
+                  className={`px-4 py-2 rounded-md ${
+                    activeView === 'create' 
+                      ? 'bg-beach-blue text-white' 
+                      : 'bg-white text-beach-darkGray'
+                  }`}
+                >
+                  Criar Evento
+                </button>
+                <button 
+                  onClick={() => setActiveView('view')}
+                  className={`px-4 py-2 rounded-md ${
+                    activeView === 'view' 
+                      ? 'bg-beach-blue text-white' 
+                      : 'bg-white text-beach-darkGray'
+                  }`}
+                >
+                  Visualizar Eventos
+                </button>
+              </div>
+              
+              {selectedEvent && (
+                <div className="text-sm font-medium">
+                  Evento atual: {selectedEvent.name}
+                </div>
+              )}
+            </div>
+            
+            {activeView === 'view' ? (
+              // Exibe o gerenciador de eventos para buscar e selecionar eventos
+              <EventManager
                 format={format}
-                teams={teams}
-                setTeams={setTeams}
+                currentState={{
+                  players,
+                  teams,
+                  matches: currentMatches,
+                  completedMatches,
+                  currentRound,
+                  tournamentSettings
+                }}
+                onEventSelect={handleEventSelect}
               />
             ) : (
-              <PlayerManagement 
-                players={players} 
-                setPlayers={setPlayers} 
-                format={format} 
-              />
-            )}
-            
-            {/* Critérios de Classificação */}
-            <SortingCriteriaSelector onCriteriaChange={setSortingCriteria} />
-            
-            {/* Componentes específicos para o formato de torneio */}
-            {format === 'tournament' && (
-              <TournamentSetup 
-                teams={teams}
-                onSettingsChange={handleTournamentSettingsChange}
-                currentMatches={currentMatches}
-                completedMatches={completedMatches}
-                onMatchUpdate={handleMatchUpdate}
-              />
-            )}
-            
-            {/* Interface Principal do Torneio */}
-            <Tabs defaultValue="matches" className="mt-6">
-              <TabsList className="w-full bg-white">
-                <TabsTrigger value="matches" className="flex-1">Partidas</TabsTrigger>
-                <TabsTrigger value="standings" className="flex-1">Classificação</TabsTrigger>
-                <TabsTrigger value="history" className="flex-1">Histórico</TabsTrigger>
-                {format === 'tournament' && (
-                  <TabsTrigger value="bracket" className="flex-1">Chaveamento</TabsTrigger>
-                )}
-              </TabsList>
-              
-              <TabsContent value="matches" className="mt-4">
-                {/* Sistema de Sorteio de Partidas */}
-                {format !== 'tournament' && (
-                  <MatchDrawingSystem 
-                    players={players}
+              // Exibe o fluxo normal de criação/gerenciamento de evento
+              <>
+                {/* Gerenciamento de Jogadores ou Times */}
+                {format === 'tournament' ? (
+                  <PlayerManagement 
+                    players={players} 
+                    setPlayers={setPlayers} 
                     format={format}
-                    currentRound={currentRound}
-                    pastMatches={completedMatches}
-                    onMatchesGenerated={handleMatchesGenerated}
+                    teams={teams}
+                    setTeams={setTeams}
+                  />
+                ) : (
+                  <PlayerManagement 
+                    players={players} 
+                    setPlayers={setPlayers} 
+                    format={format} 
                   />
                 )}
                 
-                {/* Partidas Atuais */}
-                {currentMatches.length > 0 && (
-                  <div className="mt-6">
-                    <h2 className="text-xl font-bold mb-4 text-beach-darkGray">Partidas Atuais</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {currentMatches.filter(m => !m.groupId).map(match => (
-                        <MatchCard 
-                          key={match.id} 
-                          match={match} 
-                          onMatchUpdate={handleMatchUpdate} 
-                        />
-                      ))}
-                    </div>
-                  </div>
+                {/* Critérios de Classificação */}
+                <SortingCriteriaSelector onCriteriaChange={setSortingCriteria} />
+                
+                {/* Componentes específicos para o formato de torneio */}
+                {format === 'tournament' && (
+                  <TournamentSetup 
+                    teams={teams}
+                    onSettingsChange={handleTournamentSettingsChange}
+                    currentMatches={currentMatches}
+                    completedMatches={completedMatches}
+                    onMatchUpdate={handleMatchUpdate}
+                  />
                 )}
-              </TabsContent>
-              
-              <TabsContent value="standings" className="mt-4">
-                <Standings 
-                  playerStats={playerStats} 
-                  sortingCriteria={sortingCriteria}
-                />
-              </TabsContent>
-              
-              <TabsContent value="history" className="mt-4">
-                <MatchHistory matches={completedMatches} />
-              </TabsContent>
-              
-              {format === 'tournament' && (
-                <TabsContent value="bracket" className="mt-4">
-                  {tournamentSettings && (
-                    <TournamentBracket 
-                      settings={tournamentSettings}
-                      matches={[...currentMatches, ...completedMatches]}
-                      onMatchUpdate={handleMatchUpdate}
+                
+                {/* Interface Principal do Torneio */}
+                <Tabs defaultValue="matches" className="mt-6">
+                  <TabsList className="w-full bg-white">
+                    <TabsTrigger value="matches" className="flex-1">Partidas</TabsTrigger>
+                    <TabsTrigger value="standings" className="flex-1">Classificação</TabsTrigger>
+                    <TabsTrigger value="history" className="flex-1">Histórico</TabsTrigger>
+                    {format === 'tournament' && (
+                      <TabsTrigger value="bracket" className="flex-1">Chaveamento</TabsTrigger>
+                    )}
+                  </TabsList>
+                  
+                  <TabsContent value="matches" className="mt-4">
+                    {/* Sistema de Sorteio de Partidas */}
+                    {format !== 'tournament' && (
+                      <MatchDrawingSystem 
+                        players={players}
+                        format={format}
+                        currentRound={currentRound}
+                        pastMatches={completedMatches}
+                        onMatchesGenerated={handleMatchesGenerated}
+                      />
+                    )}
+                    
+                    {/* Partidas Atuais */}
+                    {currentMatches.length > 0 && (
+                      <div className="mt-6">
+                        <h2 className="text-xl font-bold mb-4 text-beach-darkGray">Partidas Atuais</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {currentMatches.filter(m => !m.groupId).map(match => (
+                            <MatchCard 
+                              key={match.id} 
+                              match={match} 
+                              onMatchUpdate={handleMatchUpdate} 
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
+                  
+                  <TabsContent value="standings" className="mt-4">
+                    <Standings 
+                      playerStats={playerStats} 
+                      sortingCriteria={sortingCriteria}
                     />
+                  </TabsContent>
+                  
+                  <TabsContent value="history" className="mt-4">
+                    <MatchHistory matches={completedMatches} />
+                  </TabsContent>
+                  
+                  {format === 'tournament' && (
+                    <TabsContent value="bracket" className="mt-4">
+                      {tournamentSettings && (
+                        <TournamentBracket 
+                          settings={tournamentSettings}
+                          matches={[...currentMatches, ...completedMatches]}
+                          onMatchUpdate={handleMatchUpdate}
+                        />
+                      )}
+                    </TabsContent>
                   )}
-                </TabsContent>
-              )}
-            </Tabs>
+                </Tabs>
+                
+                {/* Botão para Salvar Evento após configuração */}
+                {(players.length > 0 || teams.length > 0) && (
+                  <EventManager
+                    format={format}
+                    currentState={{
+                      players,
+                      teams,
+                      matches: currentMatches,
+                      completedMatches,
+                      currentRound,
+                      tournamentSettings
+                    }}
+                    onEventSelect={handleEventSelect}
+                  />
+                )}
+              </>
+            )}
           </>
         )}
       </main>
