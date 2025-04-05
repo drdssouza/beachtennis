@@ -34,7 +34,7 @@ export function MatchDrawingSystem({
   return (
     <div className="beach-card mt-6">
       <h2 className="text-xl font-bold mb-4 text-beach-darkGray">
-        Sortear Partidas
+        Gerar Todas as Partidas
       </h2>
       <p className="text-sm text-gray-600 mb-4">Rodada atual: {currentRound}</p>
 
@@ -50,15 +50,20 @@ export function MatchDrawingSystem({
             }`}
           >
             <Users className="h-5 w-5" />
-            <span>Sortear Partidas</span>
+            <span>Gerar Todas as Partidas Possíveis</span>
           </Button>
           
           {players.length < requiredPlayers && (
             <p className="text-beach-red text-sm mt-2">
               Você precisa adicionar {requiredPlayers - players.length} jogadores
-              para poder sortear as partidas.
+              para poder gerar as partidas.
             </p>
           )}
+          
+          <p className="text-sm text-gray-500 mt-3">
+            Este botão irá gerar todas as combinações possíveis de duplas que ainda não jogaram juntas.
+            As partidas serão adicionadas automaticamente ao sistema.
+          </p>
         </>
       )}
     </div>

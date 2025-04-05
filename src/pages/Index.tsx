@@ -45,6 +45,9 @@ const Index = () => {
     // Inicializa estatísticas para todos os jogadores (tanto individuais quanto em equipes)
     const stats: Record<string, PlayerStats> = {};
     
+    // Inicializa contagem de partidas para cada jogador
+    const playerMatches: Record<string, Set<string>> = {};
+    
     // Adiciona jogadores individuais
     players.forEach(player => {
       stats[player.id] = {
@@ -52,8 +55,10 @@ const Index = () => {
         wins: 0,
         totalGamesWon: 0,
         totalGamesLost: 0,
-        gameBalance: 0
+        gameBalance: 0,
+        matchesPlayed: 0
       };
+      playerMatches[player.id] = new Set();
     });
     
     // Adiciona jogadores de equipes
@@ -64,14 +69,24 @@ const Index = () => {
           wins: 0,
           totalGamesWon: 0,
           totalGamesLost: 0,
-          gameBalance: 0
+          gameBalance: 0,
+          matchesPlayed: 0
         };
+        playerMatches[player.id] = new Set();
       });
     });
     
     // Calcula estatísticas baseadas nas partidas
     allMatches.forEach(match => {
       if (!match.completed) return;
+      
+      // Registra que os jogadores participaram desta partida
+      const matchId = match.id;
+      [match.team1[0], match.team1[1], match.team2[0], match.team2[1]].forEach(player => {
+        if (stats[player.id] && playerMatches[player.id]) {
+          playerMatches[player.id].add(matchId);
+        }
+      });
       
       // Time 1 venceu
       if (match.score1 > match.score2) {
@@ -102,6 +117,13 @@ const Index = () => {
       if (stats[match.team2[1].id]) {
         stats[match.team2[1].id].totalGamesWon += match.score2;
         stats[match.team2[1].id].totalGamesLost += match.score1;
+      }
+    });
+    
+    // Atualiza o total de partidas jogadas por cada jogador
+    Object.keys(playerMatches).forEach(playerId => {
+      if (stats[playerId]) {
+        stats[playerId].matchesPlayed = playerMatches[playerId].size;
       }
     });
     

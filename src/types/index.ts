@@ -28,6 +28,7 @@ export interface PlayerStats {
   totalGamesWon: number;
   totalGamesLost: number;
   gameBalance: number;
+  matchesPlayed: number;
 }
 
 export interface TournamentGroup {

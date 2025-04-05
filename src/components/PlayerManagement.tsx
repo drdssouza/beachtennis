@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Player, Team, TournamentFormat } from "../types";
-import { Plus, Trash2, User, Users } from "lucide-react";
+import { Plus, Trash2, User, Users, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -23,6 +23,8 @@ export function PlayerManagement({
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayer1Name, setNewPlayer1Name] = useState("");
   const [newPlayer2Name, setNewPlayer2Name] = useState("");
+  const [editingPlayer, setEditingPlayer] = useState<{id: string, name: string} | null>(null);
+  const [editingTeam, setEditingTeam] = useState<{id: string, player1Name: string, player2Name: string} | null>(null);
   
   // Definir o número máximo de jogadores/equipes com base no formato
   const getMaxPlayers = () => {
@@ -34,7 +36,7 @@ export function PlayerManagement({
     }
   };
   
-  const requiredPlayers = format === 'tournament' ? 4 : format === 'super8' ? 8 : 12;
+  const requiredPlayers = format === 'super8' ? 8 : format === 'super12' ? 12 : 4;
   const maxPlayers = getMaxPlayers();
   const maxTeams = Math.floor(maxPlayers / 2);
   
@@ -108,6 +110,85 @@ export function PlayerManagement({
     toast.success("Dupla removida com sucesso!");
   };
   
+  const startEditingPlayer = (player: Player) => {
+    setEditingPlayer({id: player.id, name: player.name});
+  };
+  
+  const startEditingTeam = (team: Team) => {
+    setEditingTeam({
+      id: team.id,
+      player1Name: team.players[0].name,
+      player2Name: team.players[1].name
+    });
+  };
+  
+  const updatePlayer = () => {
+    if (!editingPlayer) return;
+    
+    if (!editingPlayer.name.trim()) {
+      toast.error("Por favor, insira um nome para o jogador");
+      return;
+    }
+    
+    const updatedPlayers = players.map(player => 
+      player.id === editingPlayer.id 
+        ? {...player, name: editingPlayer.name.trim()} 
+        : player
+    );
+    
+    setPlayers(updatedPlayers);
+    setEditingPlayer(null);
+    toast.success("Jogador atualizado com sucesso!");
+  };
+  
+  const updateTeam = () => {
+    if (!editingTeam) return;
+    
+    if (!editingTeam.player1Name.trim() || !editingTeam.player2Name.trim()) {
+      toast.error("Por favor, insira os nomes de ambos os jogadores");
+      return;
+    }
+    
+    const updatedTeams = teams.map(team => {
+      if (team.id === editingTeam.id) {
+        const updatedPlayers: [Player, Player] = [
+          {...team.players[0], name: editingTeam.player1Name.trim()},
+          {...team.players[1], name: editingTeam.player2Name.trim()}
+        ];
+        
+        return {
+          ...team,
+          players: updatedPlayers,
+          name: `${updatedPlayers[0].name} / ${updatedPlayers[1].name}`
+        };
+      }
+      return team;
+    });
+    
+    setTeams(updatedTeams);
+    setEditingTeam(null);
+    toast.success("Dupla atualizada com sucesso!");
+  };
+  
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      addPlayer();
+    }
+  };
+  
+  const handleTeamKeyPress = (e: React.KeyboardEvent, field: 'player1' | 'player2') => {
+    if (e.key === 'Enter') {
+      // Se ambos os campos estiverem preenchidos, adicione a equipe
+      if (field === 'player1' && newPlayer2Name.trim() || field === 'player2' && newPlayer1Name.trim()) {
+        addTeam();
+      } else {
+        // Caso contrário, mova o foco para o próximo campo
+        const nextField = field === 'player1' ? 'player2' : 'player1';
+        document.getElementById(nextField)?.focus();
+      }
+    }
+  };
+  
   if (format === 'tournament') {
     return (
       <div className="beach-card mt-6">
@@ -125,6 +206,7 @@ export function PlayerManagement({
                 type="text"
                 value={newPlayer1Name}
                 onChange={(e) => setNewPlayer1Name(e.target.value)}
+                onKeyPress={(e) => handleTeamKeyPress(e, 'player1')}
                 placeholder="Nome do jogador 1"
                 className="w-full"
               />
@@ -140,6 +222,7 @@ export function PlayerManagement({
                 type="text"
                 value={newPlayer2Name}
                 onChange={(e) => setNewPlayer2Name(e.target.value)}
+                onKeyPress={(e) => handleTeamKeyPress(e, 'player2')}
                 placeholder="Nome do jogador 2"
                 className="w-full"
               />
@@ -157,7 +240,7 @@ export function PlayerManagement({
         </Button>
         
         <div className="bg-beach-lightGray rounded-lg p-2">
-          <h3 className="font-semibold mb-2">Lista de Duplas ({teams.length}/{format === 'tournament' ? `2-${maxTeams}` : requiredPlayers / 2})</h3>
+          <h3 className="font-semibold mb-2">Lista de Duplas ({teams.length}/{maxTeams > 0 ? `2-${maxTeams}` : requiredPlayers / 2})</h3>
           
           {teams.length === 0 ? (
             <div className="text-center py-4 text-gray-500">
@@ -170,18 +253,65 @@ export function PlayerManagement({
                   key={team.id} 
                   className="flex justify-between items-center bg-white p-3 rounded-md shadow-sm"
                 >
-                  <div>
-                    <span className="font-medium">{team.name}</span>
-                    <div className="text-xs text-gray-500">
-                      {team.players[0].name} • {team.players[1].name}
+                  {editingTeam && editingTeam.id === team.id ? (
+                    <div className="w-full">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
+                        <Input
+                          value={editingTeam.player1Name}
+                          onChange={(e) => setEditingTeam({...editingTeam, player1Name: e.target.value})}
+                          placeholder="Jogador 1"
+                          className="w-full text-sm"
+                        />
+                        <Input
+                          value={editingTeam.player2Name}
+                          onChange={(e) => setEditingTeam({...editingTeam, player2Name: e.target.value})}
+                          placeholder="Jogador 2"
+                          className="w-full text-sm"
+                        />
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button 
+                          onClick={updateTeam}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs py-0 h-6"
+                        >
+                          Salvar
+                        </Button>
+                        <Button 
+                          onClick={() => setEditingTeam(null)}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs py-0 h-6"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <button 
-                    onClick={() => removeTeam(team.id)}
-                    className="text-beach-red hover:bg-red-50 rounded-full p-1"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="font-medium">{team.name}</span>
+                        <div className="text-xs text-gray-500">
+                          {team.players[0].name} • {team.players[1].name}
+                        </div>
+                      </div>
+                      <div className="flex space-x-1">
+                        <button 
+                          onClick={() => startEditingTeam(team)}
+                          className="text-beach-blue hover:bg-blue-50 rounded-full p-1"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button 
+                          onClick={() => removeTeam(team.id)}
+                          className="text-beach-red hover:bg-red-50 rounded-full p-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -198,9 +328,7 @@ export function PlayerManagement({
       <p className="text-sm text-gray-600 mb-4">
         {format === 'super8' 
           ? 'Adicione 8 jogadores para o formato Super 8' 
-          : format === 'super12'
-            ? 'Adicione 12 jogadores para o formato Super 12'
-            : `Adicione de 4 a ${maxPlayers} jogadores para o formato Torneio`}
+          : 'Adicione 12 jogadores para o formato Super 12'}
       </p>
       
       <div className="flex mb-4">
@@ -209,6 +337,7 @@ export function PlayerManagement({
             type="text"
             value={newPlayerName}
             onChange={(e) => setNewPlayerName(e.target.value)}
+            onKeyPress={handleKeyPress}
             placeholder="Nome do jogador"
             className="w-full p-2 pr-10 border rounded-l-lg focus:outline-none focus:ring-1 focus:ring-beach-blue"
           />
@@ -223,7 +352,7 @@ export function PlayerManagement({
       </div>
       
       <div className="bg-beach-lightGray rounded-lg p-2">
-        <h3 className="font-semibold mb-2">Lista de Jogadores ({players.length}/{format === 'tournament' ? `4-${maxPlayers}` : requiredPlayers})</h3>
+        <h3 className="font-semibold mb-2">Lista de Jogadores ({players.length}/{requiredPlayers})</h3>
         
         {players.length === 0 ? (
           <div className="text-center py-4 text-gray-500">
@@ -236,13 +365,47 @@ export function PlayerManagement({
                 key={player.id} 
                 className="flex justify-between items-center bg-white p-3 rounded-md shadow-sm"
               >
-                <span>{player.name}</span>
-                <button 
-                  onClick={() => removePlayer(player.id)}
-                  className="text-beach-red hover:bg-red-50 rounded-full p-1"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                {editingPlayer && editingPlayer.id === player.id ? (
+                  <div className="flex-1 flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={editingPlayer.name}
+                      onChange={(e) => setEditingPlayer({...editingPlayer, name: e.target.value})}
+                      className="flex-1 p-1 border rounded focus:outline-none focus:ring-1 focus:ring-beach-blue"
+                      autoFocus
+                    />
+                    <button 
+                      onClick={updatePlayer}
+                      className="text-beach-green hover:bg-green-50 rounded-full p-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => setEditingPlayer(null)}
+                      className="text-beach-red hover:bg-red-50 rounded-full p-1"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <span>{player.name}</span>
+                    <div className="flex space-x-1">
+                      <button 
+                        onClick={() => startEditingPlayer(player)}
+                        className="text-beach-blue hover:bg-blue-50 rounded-full p-1"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button 
+                        onClick={() => removePlayer(player.id)}
+                        className="text-beach-red hover:bg-red-50 rounded-full p-1"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

@@ -49,6 +49,7 @@ export function Standings({ playerStats, sortingCriteria }: StandingsProps) {
             <TableRow className="bg-beach-lightGray">
               <TableHead className="w-16">Pos.</TableHead>
               <TableHead>Jogador</TableHead>
+              <TableHead className="text-center">Jogos</TableHead>
               <TableHead className="text-center">Vitórias</TableHead>
               <TableHead className="text-center">Games Ganhos</TableHead>
               <TableHead className="text-center">Games Perdidos</TableHead>
@@ -70,6 +71,7 @@ export function Standings({ playerStats, sortingCriteria }: StandingsProps) {
                   )}
                 </TableCell>
                 <TableCell className="font-medium">{stat.player.name}</TableCell>
+                <TableCell className="text-center">{stat.matchesPlayed}</TableCell>
                 <TableCell className="text-center font-bold">{stat.wins}</TableCell>
                 <TableCell className="text-center">{stat.totalGamesWon}</TableCell>
                 <TableCell className="text-center">{stat.totalGamesLost}</TableCell>
