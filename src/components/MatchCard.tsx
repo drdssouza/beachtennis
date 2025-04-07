@@ -42,123 +42,116 @@ export function MatchCard({ match, onMatchUpdate }: MatchCardProps) {
   };
   
   return (
-    <div className="beach-card card-gradient animate-fade overflow-hidden">
-      <div className="bg-gradient-to-r from-beach-blue to-beach-teal text-white p-4 -mx-6 -mt-6 mb-6 font-semibold text-center">
-        <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-sm mb-1">Rodada {match.round}</span>
-        <div>Partida {match.id.slice(0, 4)}</div>
-      </div>
-      
-      <div className="space-y-6">
-        <div className="grid grid-cols-3 gap-4 items-center">
-          <div className="col-span-1 text-center">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="font-bold mb-1 text-beach-blue">Equipe 1</div>
-              <div className="px-3 py-1 bg-gray-50 rounded-lg w-full">
-                <div className="text-sm font-medium">{match.team1[0].name}</div>
-              </div>
-              <div className="px-3 py-1 bg-gray-50 rounded-lg w-full">
-                <div className="text-sm font-medium">{match.team1[1].name}</div>
-              </div>
+    <div className="w-full bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+      <div className="grid grid-cols-12 gap-6 items-center">
+        {/* Team 1 */}
+        <div className="col-span-4">
+          <div className="font-bold mb-2 text-beach-blue text-lg">Equipe 1</div>
+          {match.team1.map((player, index) => (
+            <div key={player.id} className="px-4 py-2 bg-gray-50 rounded-lg mb-2 border-l-4 border-beach-blue">
+              <div className="text-sm font-medium">{player.name}</div>
             </div>
+          ))}
+        </div>
+        
+        {/* Score */}
+        <div className="col-span-4 flex justify-center items-center bg-gray-50 py-4 rounded-xl">
+          <div className={`text-4xl font-bold ${match.completed && !isEditing ? (score1 > score2 ? 'text-beach-green' : score1 < score2 ? 'text-beach-red' : 'text-beach-darkGray') : 'text-beach-darkGray'}`}>
+            {score1}
           </div>
-          
-          <div className="col-span-1 flex justify-center items-center">
-            <div className={`text-3xl font-bold ${match.completed && !isEditing ? (score1 > score2 ? 'text-beach-green' : score1 < score2 ? 'text-beach-red' : 'text-beach-darkGray') : 'text-beach-darkGray'}`}>
-              {score1}
-            </div>
-            <div className="mx-2 text-xl">:</div>
-            <div className={`text-3xl font-bold ${match.completed && !isEditing ? (score2 > score1 ? 'text-beach-green' : score2 < score1 ? 'text-beach-red' : 'text-beach-darkGray') : 'text-beach-darkGray'}`}>
-              {score2}
-            </div>
-          </div>
-          
-          <div className="col-span-1 text-center">
-            <div className="flex flex-col items-center space-y-2">
-              <div className="font-bold mb-1 text-beach-orange">Equipe 2</div>
-              <div className="px-3 py-1 bg-gray-50 rounded-lg w-full">
-                <div className="text-sm font-medium">{match.team2[0].name}</div>
-              </div>
-              <div className="px-3 py-1 bg-gray-50 rounded-lg w-full">
-                <div className="text-sm font-medium">{match.team2[1].name}</div>
-              </div>
-            </div>
+          <div className="mx-3 text-2xl font-light text-gray-400">:</div>
+          <div className={`text-4xl font-bold ${match.completed && !isEditing ? (score2 > score1 ? 'text-beach-green' : score2 < score1 ? 'text-beach-red' : 'text-beach-darkGray') : 'text-beach-darkGray'}`}>
+            {score2}
           </div>
         </div>
         
-        {isEditing ? (
-          <>
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="flex flex-col items-center space-y-3">
-                <button 
-                  onClick={() => updateScore(1, true)}
-                  className="p-2 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
-                >
-                  <Plus className="h-5 w-5 text-beach-blue" />
-                </button>
-                <button 
-                  onClick={() => updateScore(1, false)}
-                  className="p-2 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
-                >
-                  <Minus className="h-5 w-5 text-beach-blue" />
-                </button>
-              </div>
-              
-              <div></div>
-              
-              <div className="flex flex-col items-center space-y-3">
-                <button 
-                  onClick={() => updateScore(2, true)}
-                  className="p-2 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
-                >
-                  <Plus className="h-5 w-5 text-beach-orange" />
-                </button>
-                <button 
-                  onClick={() => updateScore(2, false)}
-                  className="p-2 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
-                >
-                  <Minus className="h-5 w-5 text-beach-orange" />
-                </button>
-              </div>
+        {/* Team 2 */}
+        <div className="col-span-4">
+          <div className="font-bold mb-2 text-beach-orange text-lg text-right">Equipe 2</div>
+          {match.team2.map((player, index) => (
+            <div key={player.id} className="px-4 py-2 bg-gray-50 rounded-lg mb-2 border-r-4 border-beach-orange text-right">
+              <div className="text-sm font-medium">{player.name}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {isEditing ? (
+        <div className="mt-6">
+          <div className="grid grid-cols-12 gap-4">
+            {/* Team 1 Score Controls */}
+            <div className="col-span-4 flex justify-center space-x-4">
+              <button 
+                onClick={() => updateScore(1, false)}
+                className="p-3 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <Minus className="h-5 w-5 text-beach-blue" />
+              </button>
+              <button 
+                onClick={() => updateScore(1, true)}
+                className="p-3 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <Plus className="h-5 w-5 text-beach-blue" />
+              </button>
             </div>
             
-            <Button 
-              onClick={saveMatch}
-              className="w-full bg-gradient-to-r from-beach-teal to-beach-blue hover:opacity-90 transition-all text-white flex justify-center items-center gap-2 rounded-full"
-            >
-              <Check className="h-5 w-5" />
-              <span>{match.completed ? "Atualizar Placar" : "Finalizar Partida"}</span>
-            </Button>
-          </>
-        ) : (
-          <div className="space-y-4">
-            {match.completed && (
-              <div className="bg-beach-lightGray rounded-lg p-3 text-center">
-                {score1 > score2 ? (
-                  <div className="text-beach-green font-medium">
-                    Vitória da Equipe 1
-                  </div>
-                ) : score1 < score2 ? (
-                  <div className="text-beach-green font-medium">
-                    Vitória da Equipe 2
-                  </div>
-                ) : (
-                  <div className="text-beach-darkGray font-medium">
-                    Empate
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="col-span-4 flex justify-center items-center">
+              <Button 
+                onClick={saveMatch}
+                className="w-full py-6 bg-gradient-to-r from-beach-teal to-beach-blue hover:opacity-90 transition-all text-white flex justify-center items-center gap-2 rounded-full"
+              >
+                <Check className="h-5 w-5" />
+                <span className="text-base">{match.completed ? "Atualizar" : "Salvar"}</span>
+              </Button>
+            </div>
             
-            <Button 
-              onClick={editMatch}
-              className="w-full bg-gradient-to-r from-beach-orange to-beach-coral hover:opacity-90 transition-all text-white flex justify-center items-center gap-2 rounded-full"
-            >
-              <Edit className="h-5 w-5" />
-              <span>Editar Placar</span>
-            </Button>
+            {/* Team 2 Score Controls */}
+            <div className="col-span-4 flex justify-center space-x-4">
+              <button 
+                onClick={() => updateScore(2, false)}
+                className="p-3 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <Minus className="h-5 w-5 text-beach-orange" />
+              </button>
+              <button 
+                onClick={() => updateScore(2, true)}
+                className="p-3 bg-beach-lightGray rounded-full hover:bg-gray-200 transition-colors"
+              >
+                <Plus className="h-5 w-5 text-beach-orange" />
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="mt-6 flex justify-center">
+          <Button 
+            onClick={editMatch}
+            variant="outline" 
+            className="flex items-center gap-2 border-beach-orange text-beach-orange hover:bg-beach-orange/10 py-6 px-6"
+          >
+            <Edit className="h-5 w-5" />
+            <span className="text-base">Editar Placar</span>
+          </Button>
+        </div>
+      )}
+      
+      {match.completed && !isEditing && (
+        <div className="mt-4 bg-gray-50 rounded-lg p-4 text-center">
+          {score1 > score2 ? (
+            <div className="text-beach-green font-medium text-lg">
+              Vitória da Equipe 1
+            </div>
+          ) : score1 < score2 ? (
+            <div className="text-beach-green font-medium text-lg">
+              Vitória da Equipe 2
+            </div>
+          ) : (
+            <div className="text-beach-darkGray font-medium text-lg">
+              Empate
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

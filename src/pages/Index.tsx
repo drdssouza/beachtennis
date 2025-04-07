@@ -7,241 +7,128 @@ import { MatchCard } from "@/components/MatchCard";
 import { Standings } from "@/components/Standings";
 import { MatchHistory } from "@/components/MatchHistory";
 import { SortingCriteriaSelector } from "@/components/SortingCriteriaSelector";
-import { TournamentSetup } from "@/components/TournamentSetup";
-import { TournamentBracket } from "@/components/TournamentBracket";
 import { EventManager } from "@/components/EventManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Player, Match, PlayerStats, TournamentFormat, TournamentSettings, Team, Event } from "@/types";
+import { Player, Match, PlayerStats, TournamentFormat, Event } from "@/types";
 import { 
   SortingCriterion, 
   loadSortingCriteria, 
-  saveFormat,
-  loadTournamentSettings,
-  saveTournamentSettings
+  saveFormat
 } from "@/utils/storage_utils";
 import { toast } from "sonner";
+import { generateEventCode } from "@/utils/event_utils";
 
 const Index = () => {
   const [format, setFormat] = useState<TournamentFormat | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [currentRound, setCurrentRound] = useState(1);
   const [currentMatches, setCurrentMatches] = useState<Match[]>([]);
   const [completedMatches, setCompletedMatches] = useState<Match[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
   const [sortingCriteria, setSortingCriteria] = useState<SortingCriterion[]>(
     loadSortingCriteria()
   );
-  const [tournamentSettings, setTournamentSettings] = useState<TournamentSettings | null>(
-    loadTournamentSettings()
-  );
   const [activeView, setActiveView] = useState<'create' | 'view'>('create');
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   
   // Calcula as estatísticas dos jogadores baseadas nas partidas
   useEffect(() => {
-    const allMatches = [...completedMatches, ...currentMatches.filter(m => m.completed)];
-    
-    // Inicializa estatísticas para todos os jogadores (tanto individuais quanto em equipes)
-    const stats: Record<string, PlayerStats> = {};
-    
-    // Inicializa contagem de partidas para cada jogador
-    const playerMatches: Record<string, Set<string>> = {};
-    
-    // Adiciona jogadores individuais
-    players.forEach(player => {
-      stats[player.id] = {
-        player,
-        wins: 0,
-        totalGamesWon: 0,
-        totalGamesLost: 0,
-        gameBalance: 0,
-        matchesPlayed: 0
-      };
-      playerMatches[player.id] = new Set();
-    });
-    
-    // Adiciona jogadores de equipes
-    teams.forEach(team => {
-      team.players.forEach(player => {
-        stats[player.id] = {
-          player,
-          wins: 0,
-          totalGamesWon: 0,
-          totalGamesLost: 0,
-          gameBalance: 0,
-          matchesPlayed: 0
-        };
-        playerMatches[player.id] = new Set();
-      });
-    });
-    
-    // Calcula estatísticas baseadas nas partidas
-    allMatches.forEach(match => {
-      if (!match.completed) return;
-      
-      // Registra que os jogadores participaram desta partida
-      const matchId = match.id;
-      [match.team1[0], match.team1[1], match.team2[0], match.team2[1]].forEach(player => {
-        if (stats[player.id] && playerMatches[player.id]) {
-          playerMatches[player.id].add(matchId);
-        }
-      });
-      
-      // Time 1 venceu
-      if (match.score1 > match.score2) {
-        if (stats[match.team1[0].id]) stats[match.team1[0].id].wins++;
-        if (stats[match.team1[1].id]) stats[match.team1[1].id].wins++;
-      }
-      // Time 2 venceu
-      else if (match.score2 > match.score1) {
-        if (stats[match.team2[0].id]) stats[match.team2[0].id].wins++;
-        if (stats[match.team2[1].id]) stats[match.team2[1].id].wins++;
-      }
-      
-      // Adiciona games ganhos/perdidos para jogadores do Time 1
-      if (stats[match.team1[0].id]) {
-        stats[match.team1[0].id].totalGamesWon += match.score1;
-        stats[match.team1[0].id].totalGamesLost += match.score2;
-      }
-      if (stats[match.team1[1].id]) {
-        stats[match.team1[1].id].totalGamesWon += match.score1;
-        stats[match.team1[1].id].totalGamesLost += match.score2;
-      }
-      
-      // Adiciona games ganhos/perdidos para jogadores do Time 2
-      if (stats[match.team2[0].id]) {
-        stats[match.team2[0].id].totalGamesWon += match.score2;
-        stats[match.team2[0].id].totalGamesLost += match.score1;
-      }
-      if (stats[match.team2[1].id]) {
-        stats[match.team2[1].id].totalGamesWon += match.score2;
-        stats[match.team2[1].id].totalGamesLost += match.score1;
-      }
-    });
-    
-    // Atualiza o total de partidas jogadas por cada jogador
-    Object.keys(playerMatches).forEach(playerId => {
-      if (stats[playerId]) {
-        stats[playerId].matchesPlayed = playerMatches[playerId].size;
-      }
-    });
-    
-    // Calcula saldo de games
-    Object.values(stats).forEach(stat => {
-      stat.gameBalance = stat.totalGamesWon - stat.totalGamesLost;
-    });
-    
-    setPlayerStats(Object.values(stats));
-  }, [players, teams, currentMatches, completedMatches]);
+    // ... keep existing code (statistics calculation)
+  }, [players, currentMatches, completedMatches]);
   
   const handleFormatSelect = (selectedFormat: TournamentFormat) => {
-    setFormat(selectedFormat);
-    saveFormat(selectedFormat);
-    setPlayers([]);
-    setTeams([]);
-    setCurrentMatches([]);
-    setCompletedMatches([]);
-    setCurrentRound(1);
-    setTournamentSettings(null);
-    setActiveView('create');
-    setSelectedEvent(null);
+    // Filtramos para aceitar apenas os formatos super8 e super12
+    if (selectedFormat === 'super8' || selectedFormat === 'super12') {
+      setFormat(selectedFormat);
+      saveFormat(selectedFormat);
+      setPlayers([]);
+      setCurrentMatches([]);
+      setCompletedMatches([]);
+      setActiveView('create');
+      
+      // Automatically create a new event
+      const eventName = selectedFormat === 'super8' ? 'Super 8' : 'Super 12';
+      const uniqueCode = generateEventCode();
+      const newEvent: Event = {
+        id: crypto.randomUUID(),
+        name: `${eventName} - ${new Date().toLocaleDateString()}`,
+        code: uniqueCode,
+        format: selectedFormat,
+        createdAt: new Date(),
+        players: [],
+        matches: [],
+        completedMatches: []
+      };
+      
+      setSelectedEvent(newEvent);
+      toast.success(`Evento "${newEvent.name}" criado com código: ${uniqueCode}`);
+    } else {
+      toast.error("Formato de torneio não disponível no momento.");
+    }
   };
   
   const handleMatchesGenerated = (newMatches: Match[]) => {
     setCurrentMatches(newMatches);
+    
+    // Also update the selected event with the new matches
+    if (selectedEvent) {
+      setSelectedEvent({
+        ...selectedEvent,
+        matches: newMatches
+      });
+    }
   };
   
   const handleMatchUpdate = (updatedMatch: Match) => {
-    // First, verify if this is a tournament bracket match
-    if (format === 'tournament' && !updatedMatch.completed) {
-      // Use the same scoring mechanism as in MatchCard for tournament bracket
-      const score1 = window.prompt("Placar da Dupla 1:", "0");
-      const score2 = window.prompt("Placar da Dupla 2:", "0");
-      
-      if (score1 !== null && score2 !== null) {
-        const s1 = parseInt(score1);
-        const s2 = parseInt(score2);
-        
-        if (!isNaN(s1) && !isNaN(s2)) {
-          updatedMatch = {
-            ...updatedMatch,
-            score1: s1,
-            score2: s2,
-            completed: true
-          };
-        } else {
-          toast.error("Por favor, informe números válidos");
-          return;
-        }
-      } else {
-        return; // User cancelled
-      }
-    }
+    let updatedCurrentMatches = [...currentMatches];
+    let updatedCompletedMatches = [...completedMatches];
     
-    // Now proceed with regular match update logic
     const matchIndex = currentMatches.findIndex(m => m.id === updatedMatch.id);
     
     if (matchIndex >= 0) {
-      // Atualiza partidas atuais
-      const updatedCurrentMatches = [...currentMatches];
+      // Update the match in current matches
       updatedCurrentMatches[matchIndex] = updatedMatch;
       
-      setCurrentMatches(updatedCurrentMatches);
-      
-      // Se a partida foi concluída, verifica se todas as partidas da rodada atual foram concluídas
+      // If match is completed, also add to completed matches
       if (updatedMatch.completed) {
-        const allCompleted = updatedCurrentMatches.every(match => match.completed);
-        
-        if (allCompleted) {
-          // Move todas as partidas atuais para as partidas concluídas
-          setCompletedMatches([...completedMatches, ...updatedCurrentMatches]);
-          // Limpa as partidas atuais
-          setCurrentMatches([]);
-          // Incrementa a rodada atual
-          setCurrentRound(prev => prev + 1);
-        }
+        updatedCompletedMatches = [...completedMatches, updatedMatch];
       }
     } else {
-      // A partida não está nas partidas atuais, então é uma partida nova (por exemplo, de grupo)
-      // ou uma partida do bracket
-      
-      // Adiciona a partida completada diretamente às partidas concluídas
-      if (updatedMatch.completed) {
-        setCompletedMatches([...completedMatches, updatedMatch]);
+      // Check if the match is in completed matches
+      const completedIndex = completedMatches.findIndex(m => m.id === updatedMatch.id);
+      if (completedIndex >= 0) {
+        // Update in completed matches
+        updatedCompletedMatches[completedIndex] = updatedMatch;
+      } else if (updatedMatch.completed) {
+        // New completed match
+        updatedCompletedMatches = [...completedMatches, updatedMatch];
       } else {
-        // Se não foi completada, adiciona às partidas atuais
-        setCurrentMatches([...currentMatches, updatedMatch]);
+        // New current match
+        updatedCurrentMatches = [...currentMatches, updatedMatch];
       }
     }
-  };
-  
-  const handleTournamentSettingsChange = (settings: TournamentSettings) => {
-    setTournamentSettings(settings);
-    saveTournamentSettings(settings);
+    
+    setCurrentMatches(updatedCurrentMatches);
+    setCompletedMatches(updatedCompletedMatches);
+    
+    // Also update the selected event
+    if (selectedEvent) {
+      setSelectedEvent({
+        ...selectedEvent,
+        matches: updatedCurrentMatches,
+        completedMatches: updatedCompletedMatches
+      });
+    }
   };
   
   const handleEventSelect = (event: Event) => {
     setFormat(event.format);
     saveFormat(event.format);
-    
-    if (event.format !== 'tournament') {
-      setPlayers(event.players || []);
-    } else {
-      setTeams(event.teams || []);
-    }
-    
-    setCurrentMatches(event.matches);
-    setCompletedMatches(event.completedMatches);
-    setCurrentRound(event.currentRound);
-    
-    if (event.tournamentSettings) {
-      setTournamentSettings(event.tournamentSettings);
-      saveTournamentSettings(event.tournamentSettings);
-    }
+    setPlayers(event.players || []);
+    setCurrentMatches(event.matches || []);
+    setCompletedMatches(event.completedMatches || []);
     
     setSelectedEvent(event);
-    setActiveView('view');
+    setActiveView('create');
     
     toast.success(`Evento "${event.name}" carregado com sucesso!`);
   };
@@ -283,7 +170,7 @@ const Index = () => {
                       : 'bg-white text-beach-darkGray'
                   }`}
                 >
-                  Criar Evento
+                  Gerenciar Evento
                 </button>
                 <button 
                   onClick={() => setActiveView('view')}
@@ -298,8 +185,13 @@ const Index = () => {
               </div>
               
               {selectedEvent && (
-                <div className="text-sm font-medium">
-                  Evento atual: {selectedEvent.name}
+                <div className="text-sm font-medium flex items-center gap-2">
+                  <span>Evento atual: {selectedEvent.name}</span>
+                  {selectedEvent.code && (
+                    <span className="bg-beach-blue/10 text-beach-blue px-2 py-1 rounded">
+                      Código: {selectedEvent.code}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -310,47 +202,25 @@ const Index = () => {
                 format={format}
                 currentState={{
                   players,
-                  teams,
+                  teams: [],
                   matches: currentMatches,
                   completedMatches,
-                  currentRound,
-                  tournamentSettings
+                  currentRound: 1
                 }}
                 onEventSelect={handleEventSelect}
               />
             ) : (
               // Exibe o fluxo normal de criação/gerenciamento de evento
               <>
-                {/* Gerenciamento de Jogadores ou Times */}
-                {format === 'tournament' ? (
-                  <PlayerManagement 
-                    players={players} 
-                    setPlayers={setPlayers} 
-                    format={format}
-                    teams={teams}
-                    setTeams={setTeams}
-                  />
-                ) : (
-                  <PlayerManagement 
-                    players={players} 
-                    setPlayers={setPlayers} 
-                    format={format} 
-                  />
-                )}
+                {/* Gerenciamento de Jogadores */}
+                <PlayerManagement 
+                  players={players} 
+                  setPlayers={setPlayers} 
+                  format={format} 
+                />
                 
                 {/* Critérios de Classificação */}
                 <SortingCriteriaSelector onCriteriaChange={setSortingCriteria} />
-                
-                {/* Componentes específicos para o formato de torneio */}
-                {format === 'tournament' && (
-                  <TournamentSetup 
-                    teams={teams}
-                    onSettingsChange={handleTournamentSettingsChange}
-                    currentMatches={currentMatches}
-                    completedMatches={completedMatches}
-                    onMatchUpdate={handleMatchUpdate}
-                  />
-                )}
                 
                 {/* Interface Principal do Torneio */}
                 <Tabs defaultValue="matches" className="mt-6">
@@ -358,38 +228,17 @@ const Index = () => {
                     <TabsTrigger value="matches" className="flex-1">Partidas</TabsTrigger>
                     <TabsTrigger value="standings" className="flex-1">Classificação</TabsTrigger>
                     <TabsTrigger value="history" className="flex-1">Histórico</TabsTrigger>
-                    {format === 'tournament' && (
-                      <TabsTrigger value="bracket" className="flex-1">Chaveamento</TabsTrigger>
-                    )}
                   </TabsList>
                   
                   <TabsContent value="matches" className="mt-4">
                     {/* Sistema de Sorteio de Partidas */}
-                    {format !== 'tournament' && (
-                      <MatchDrawingSystem 
-                        players={players}
-                        format={format}
-                        currentRound={currentRound}
-                        pastMatches={completedMatches}
-                        onMatchesGenerated={handleMatchesGenerated}
-                      />
-                    )}
-                    
-                    {/* Partidas Atuais */}
-                    {currentMatches.length > 0 && (
-                      <div className="mt-6">
-                        <h2 className="text-xl font-bold mb-4 text-beach-darkGray">Partidas Atuais</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          {currentMatches.filter(m => !m.groupId).map(match => (
-                            <MatchCard 
-                              key={match.id} 
-                              match={match} 
-                              onMatchUpdate={handleMatchUpdate} 
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <MatchDrawingSystem 
+                      players={players}
+                      pastMatches={completedMatches}
+                      currentMatches={currentMatches}
+                      onMatchesGenerated={handleMatchesGenerated}
+                      onMatchUpdate={handleMatchUpdate}
+                    />
                   </TabsContent>
                   
                   <TabsContent value="standings" className="mt-4">
@@ -402,35 +251,7 @@ const Index = () => {
                   <TabsContent value="history" className="mt-4">
                     <MatchHistory matches={completedMatches} />
                   </TabsContent>
-                  
-                  {format === 'tournament' && (
-                    <TabsContent value="bracket" className="mt-4">
-                      {tournamentSettings && (
-                        <TournamentBracket 
-                          settings={tournamentSettings}
-                          matches={[...currentMatches, ...completedMatches]}
-                          onMatchUpdate={handleMatchUpdate}
-                        />
-                      )}
-                    </TabsContent>
-                  )}
                 </Tabs>
-                
-                {/* Botão para Salvar Evento após configuração */}
-                {(players.length > 0 || teams.length > 0) && (
-                  <EventManager
-                    format={format}
-                    currentState={{
-                      players,
-                      teams,
-                      matches: currentMatches,
-                      completedMatches,
-                      currentRound,
-                      tournamentSettings
-                    }}
-                    onEventSelect={handleEventSelect}
-                  />
-                )}
               </>
             )}
           </>

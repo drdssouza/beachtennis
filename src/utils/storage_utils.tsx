@@ -1,3 +1,5 @@
+import { SortingCriterion } from "@/types";
+
 // Chaves para armazenamento local
 const TOURNAMENT_DATA_KEY = "beachTennis_tournamentData";
 
@@ -14,13 +16,16 @@ interface TournamentStorage {
   lastUpdated: number;
 }
 
-export type SortingCriterion = 'wins' | 'gameBalance' | 'totalGamesWon' | 'totalGamesLost';
-
 // Valores padrão
 const DEFAULT_STORAGE: TournamentStorage = {
   usedPairs: [],
   format: null,
-  sortingCriteria: ['wins', 'gameBalance', 'totalGamesWon', 'totalGamesLost'],
+  sortingCriteria: [
+    { field: 'wins', direction: 'desc' },
+    { field: 'gameBalance', direction: 'desc' },
+    { field: 'totalGamesWon', direction: 'desc' },
+    { field: 'totalGamesLost', direction: 'asc' }
+  ],
   tournamentSettings: null,
   lastUpdated: Date.now()
 };
